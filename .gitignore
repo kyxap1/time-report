@@ -1,0 +1,11 @@
+# Work data / generated reports — never commit to the tool repo
+report-*.txt
+excel*.txt
+test-paste.txt
+
+# Local, machine- or org-specific
+.claude/settings.local.json
+.claude/skills/work-report/config.json
+
+# Temp files
+_cctmp.*
