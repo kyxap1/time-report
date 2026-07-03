@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Gather a user's GitHub PRs and commits in an org over a date range, bucketed by
-local date (configurable timezone). Uses the `gh` CLI. Emits JSON to stdout.
+"""Gather a user's GitHub PRs, commits, and PR reviews in an org over a date range,
+bucketed by local date (configurable timezone). Uses the `gh` CLI. Emits JSON to stdout.
 
 Why this exists: the report dates are local time, but GitHub timestamps are UTC.
 Shifting commit dates by hand is error-prone (a 02:00 UTC commit is the previous
 evening in US Eastern), so the conversion is done once, here, deterministically.
+
+Reviews left on OTHER people's PRs are gathered separately from authored PRs (`--reviewed-by`
+in the search, then `pulls/{number}/reviews` for the actual state/date) so the report can say
+"reviewed and approved" / "reviewed and requested changes" instead of missing that work entirely.
 
 Org and timezone come from `config.json` next to the skill (see config.example.json);
 override with --org / --tz. Usage:
@@ -128,11 +132,52 @@ def main():
         })
         for day, n in commit_days.items():
             by_date.setdefault(day, []).append(
-                {"repo": repo, "number": number, "title": it.get("title"), "url": it.get("url"), "commits": n})
+                {"kind": "commit", "repo": repo, "number": number, "title": it.get("title"),
+                 "url": it.get("url"), "commits": n})
+
+    # PRs the user reviewed, including other people's PRs (a distinct signal from
+    # authored work: "reviewed and approved" / "reviewed and requested changes").
+    review_fields = "repository,number,title,url,author"
+    review_base = ["search", "prs", "--reviewed-by", author, "--owner", org, "--limit", "200", "--json", review_fields]
+    try:
+        reviewed_items = gh_json(review_base + ["--updated", rng])
+    except RuntimeError as e:
+        print("warning: reviewed-by search failed: %s" % e, file=sys.stderr)
+        reviewed_items = []
+
+    reviews_out = []
+    for it in reviewed_items:
+        repo = it["repository"].get("nameWithOwner") or ("%s/%s" % (org, it["repository"]["name"]))
+        number = it["number"]
+        pr_author = (it.get("author") or {}).get("login")
+        if pr_author == author:
+            continue  # self-authored PRs are already covered above via commits/creation
+        try:
+            reviews = gh_json(["api", "repos/%s/pulls/%d/reviews?per_page=100" % (repo, number)])
+        except RuntimeError as e:
+            print("warning: reviews for %s#%d failed: %s" % (repo, number, e), file=sys.stderr)
+            continue
+        time.sleep(0.5)
+        for r in reviews:
+            if r.get("user", {}).get("login") != author or not r.get("submitted_at"):
+                continue
+            state = r.get("state")
+            if state == "PENDING":
+                continue
+            day = ny_date(r["submitted_at"], tz)
+            if not (since_key <= ymd(day) <= until_key):
+                continue
+            entry = {
+                "repo": repo, "number": number, "title": it.get("title"), "url": it.get("url"),
+                "pr_author": pr_author, "state": state,
+            }
+            reviews_out.append(dict(entry, date=day))
+            by_date.setdefault(day, []).append(dict(entry, kind="review"))
 
     out = {
         "author": author, "org": org, "tz": str(tz), "range": [args.since, args.until],
         "prs": prs,
+        "reviews": reviews_out,
         "by_date": dict(sorted(by_date.items(), key=lambda kv: ymd(kv[0]))),
     }
     print(json.dumps(out, indent=2, ensure_ascii=False))

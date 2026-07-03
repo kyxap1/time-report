@@ -84,12 +84,16 @@ python scripts/fetch_github.py --since 2026-06-01 --until 2026-06-30 > _cctmp.gh
 ```
 
 It reads the org + timezone from `config.json`, searches PRs the user authored in the org
-(created/merged/updated in range), pulls each PR's commits, shifts every timestamp to the
-configured zone, and emits JSON with per-PR dates and a `by_date` index of what happened each local
-day. If `gh` is not authenticated it exits with a message — in that case use the GitHub MCP tools
-instead (`search_pull_requests` with `author:<user> org:<github_org> created:.. / merged:.. /
-updated:..`, then `pull_request_read` method `get_commits`), and shift commit dates to the
-configured zone yourself.
+(created/merged/updated in range), pulls each PR's commits, and separately searches PRs the user
+**reviewed** (including other people's PRs) to pull the actual review state (approved / changes
+requested / commented) and date from each review. It shifts every timestamp to the configured
+zone and emits JSON with per-PR dates, a top-level `reviews` list, and a `by_date` index of what
+happened each local day (`kind: "commit"` or `kind: "review"`). If `gh` is not authenticated it
+exits with a message — in that case use the GitHub MCP tools instead: `search_pull_requests` with
+`author:<user> org:<github_org> created:.. / merged:.. / updated:..` for authored PRs, and
+`reviewed-by:<user> org:<github_org> updated:..` for reviewed PRs, then `pull_request_read` method
+`get_commits` (authored) or `get_reviews` (reviewed, filter to entries by `<user>`), and shift all
+dates to the configured zone yourself.
 
 ### 4. Mine Slack (always; read-only)
 
@@ -111,8 +115,8 @@ coordination, decisions. This is high-value: it's the difference between "what g
 ### 5. Reconcile everything by local date
 
 For each day, merge the available sources: notes (authoritative for hours + intent, when present),
-GitHub (authoritative for what shipped + dates), Slack (activities not in PRs). Collapse to the
-**subject of work**, not commit minutiae. Apply the writing and hours rules in
+GitHub (authoritative for what shipped, what was reviewed, and dates), Slack (activities not in
+PRs). Collapse to the **subject of work**, not commit minutiae. Apply the writing and hours rules in
 `references/format-spec.md` exactly — they encode the required verb tone, altitude, honesty about
 hours, and how to handle forgotten/light/empty days, weekly rollups, and holidays.
 

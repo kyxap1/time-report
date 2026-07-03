@@ -43,7 +43,7 @@ and paste. Columns and multi-line cells land correctly.
 ## 2. Description rules
 
 Each day is a **summary of what the person worked on** — a few high-altitude bullets, not a commit
-log. Target **3–6 bullets per day**; a full day should read like a full day of substantive work.
+log. Target **3–8 bullets per day**; a full day should read like a full day of substantive work.
 
 **Altitude — describe the subject of work, not the mechanics.** The reader should understand what
 the day was spent on. Avoid bullets that read like a commit diff or "changed 3 values in config A
@@ -55,6 +55,15 @@ and B". Collapse a day's many small commits into the thing they add up to.
 - Good: `- discussed test-data provisioning with Alex`
 - Bad:  `- proposed a multi-year anonymized data slice to mirror prod in staging` (a single message dressed up as an accomplishment)
 
+**Retries and restarts are not their own bullet.** Re-running a build, restarting a deploy, or
+retrying a failed CI job is mechanical follow-through on the same piece of work, not a separate
+accomplishment — it happens *because of* the investigation/fix, so it belongs inside that bullet
+(or is dropped entirely) rather than reported as its own action with its own verb.
+
+- Good: `- investigated an ECR push failure blocking the Argo build`
+- Bad:  `- investigated an ECR push failure blocking the Argo build and re-ran it` (the re-run is process, not a distinct piece of work)
+- Bad:  `- restarted a stuck extapiv2 deploy run` (restarting isn't the work — describe the underlying fix that made the restart worth doing, if any; otherwise leave it out)
+
 **Start each bullet with a verb**, not a repo or PR name. Put the link at the end of the line.
 - Good: `- created https://github.com/your-org/service-b/pull/231`
 - Bad:  `- service-b https://github.com/your-org/service-b/pull/231`
@@ -63,18 +72,31 @@ and B". Collapse a day's many small commits into the thing they add up to.
 attach the PR link to the relevant bullet as context. `created https://...` and `reviewed
 https://...` are fine.
 
+**Reviews of other people's PRs name the outcome, not just the act.** The GitHub fetch reports a
+review's actual state (from the `reviews` list / `kind: "review"` entries in `by_date`) — use it
+instead of a bare "reviewed":
+- Approved: `- reviewed and approved https://github.com/your-org/service-b/pull/231`
+- Changes requested: `- reviewed https://github.com/your-org/service-b/pull/231 and requested changes`
+- Comment-only review (no approve/request-changes state): `- reviewed https://github.com/your-org/service-b/pull/231`
+
+Name the PR author when it adds context (`- reviewed and approved Sam's fix for .../pull/231`).
+Skip reviews of bot-authored or fully automated PRs (release bots, dependency-bump bots) — approving
+those isn't review work worth reporting.
+
 **Name collaborators** when relevant — it reads as real, grounded work: `helped Sam with ...`,
 `discussed ... with Alex`, `consulted Jordan on ...`.
 
 **Verb tone — strong but not grandiose.** Use plain, factual verbs. Avoid loud, self-promotional
-ones; they read as inflated in an audited report.
+ones; they read as inflated in an audited report. Pick from the list below rather than reaching for
+a synonym that isn't on it — near-miss substitutes (e.g. "coordinated" for "worked on"/"discussed")
+tend to drift toward the managerial, self-important tone this list is written to avoid.
 - Use: worked on, continued, started, prepared, built, implemented, configured, investigated,
   diagnosed, fixed, resolved, refactored, optimized, validated, hardened, enabled, standardized,
   reconciled, pinned, scoped, migrated, retired, finished, created, reviewed, experimented, helped,
   assisted, consulted, discussed, agreed to help.
 - Avoid (too loud): drove, led, advanced, progressed, launched, spearheaded, championed,
-  orchestrated, delivered (borderline — prefer finished/shipped/completed), volunteered (prefer
-  "agreed to help").
+  orchestrated, coordinated, delivered (borderline — prefer finished/shipped/completed), volunteered
+  (prefer "agreed to help").
 
 **Links:** configured org only. Use full `https://github.com/<org>/<repo>/pull/<n>` URLs.
 
@@ -140,6 +162,7 @@ A normal full day reconciled from GitHub + Slack + notes:
 ```
 6/9/2026	8.00		"- worked on the integration-test data provisioner https://github.com/your-org/service-a/pull/482
 - created https://github.com/your-org/infra/pull/210 for the deploy-role permissions
+- reviewed and approved https://github.com/your-org/service-b/pull/231
 - investigated how test users are seeded in the staging database
 - helped Sam debug a canary deployment"
 ```
