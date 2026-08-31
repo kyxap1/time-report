@@ -21,6 +21,9 @@ The skill lives in `.claude/skills/work-report/`.
   (reviews, investigations, helping teammates, dashboards).
 - **`config.json`** in the skill dir — set your `github_org` (copy from `config.example.json`).
   Stays local, not committed.
+- *(optional)* **Atlassian and Linear MCP servers** — when connected, the skill also reads your
+  Jira / Confluence / Linear activity for the period (read-only) as extra context for what each day
+  was spent on; ticket/page events themselves never appear as report lines.
 - *(optional)* **notes file** — rows of `date · hours · note`; adds your logged hours and task hints.
 
 Connect the GitHub and Slack MCP servers in your Claude setup before running (check with `/mcp`).

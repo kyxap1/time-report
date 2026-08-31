@@ -3,8 +3,9 @@ name: work-report
 description: >-
   Generate or update a monthly work-time report (timesheet) for a given month. Given a target
   month (e.g. "build my time report for June"), this skill automatically gathers the user's GitHub
-  PRs and commits in their configured GitHub org and mines their own Slack messages (including
-  private DMs) for the period, reconciles everything by the configured local date (default
+  PRs and commits in their configured GitHub org, mines their own Slack messages (including
+  private DMs) for the period, and (when connected) reads their Jira, Confluence, and Linear
+  activity as read-only context signals, reconciles everything by the configured local date (default
   America/New_York), and writes a paste-ready tab-separated report file plus a short summary of
   judgment calls. An optional spreadsheet notes file (rows of date, logged hours, short task notes)
   is used when provided to supply authoritative logged hours and task hints, but is NOT required to
@@ -55,7 +56,7 @@ days, blank days, days left for the user to fill).
 
 ## Process
 
-Work through these in order. Steps 3 and 4 are independent — run them in parallel.
+Work through these in order. Steps 3–5 are independent — run them in parallel.
 
 ### 1. Establish the month, then read any notes file
 
@@ -112,15 +113,36 @@ coordination, decisions. This is high-value: it's the difference between "what g
   work-relevant bullets (with PR links and named collaborators). Tell them to ignore social chatter
   and to never post to Slack.
 
-### 5. Reconcile everything by local date
+### 5. Pull Jira / Confluence / Linear signals (context only; read-only)
+
+Widen the view with the user's tracker and wiki activity for the period — a day spent triaging
+Jira tickets, writing a Confluence page, or grooming Linear issues often leaves no PR or Slack
+trace. These are **observability signals for your analysis, not report content**: they tell you
+what a day was about and corroborate hours, but ticket/page events never become their own bullets
+(see the rule in `references/format-spec.md`).
+
+- **Jira** — the Atlassian MCP `searchJiraIssuesUsingJql`, e.g.
+  `(assignee = currentUser() OR reporter = currentUser()) AND updated >= "<since>" AND updated <= "<until>"`.
+- **Confluence** — the Atlassian MCP `searchConfluenceUsingCql` with
+  `contributor = currentUser() and lastmodified >= "<since>" and lastmodified <= "<until>"`.
+- **Linear** — the Linear MCP tools: list issues updated in the window where the user is assignee
+  or creator.
+
+Bucket what you find into a short per-day digest (issue keys, page titles, what changed). If a
+server isn't connected, skip it and move on — these sources are optional enrichment, not a
+required input.
+
+### 6. Reconcile everything by local date
 
 For each day, merge the available sources: notes (authoritative for hours + intent, when present),
 GitHub (authoritative for what shipped, what was reviewed, and dates), Slack (activities not in
-PRs). Collapse to the **subject of work**, not commit minutiae. Apply the writing and hours rules in
+PRs), plus the Jira/Confluence/Linear digest as background — it sharpens descriptions and hours
+judgment but contributes no bullets of its own. Collapse to the **subject of work**, not commit
+minutiae. Apply the writing and hours rules in
 `references/format-spec.md` exactly — they encode the required verb tone, altitude, honesty about
 hours, and how to handle forgotten/light/empty days, weekly rollups, and holidays.
 
-### 6. Build the file (run the script)
+### 7. Build the file (run the script)
 
 Produce a JSON array of day entries and hand it to the formatter so the tab/quote format is always
 correct:
@@ -136,7 +158,7 @@ Each entry: `{"date":"6/9/2026","hours":"8.00","work_type":"","lines":["- worked
 - Empty hours → `"hours":""`. Light-day marker → `"work_type":"review"` (etc.). Truly empty day →
   `{"date":"6/15/2026"}` with no hours/work_type/lines.
 
-### 7. Deliver
+### 8. Deliver
 
 Tell the user the file is ready and how to use it (`pbcopy < report-<month>.txt`, paste at the first
 date cell). Then give a short summary of judgment calls: which forgotten days you filled and why,
@@ -148,6 +170,8 @@ borderline hours worth their eye. Honesty here matters — these reports are aud
 - **Configured org only.** Drop personal/other-org repos from the report (mention them once if
   found, don't list them).
 - **Slack is read-only.** Searching and reading is fine; sending anything is not.
+- **Jira, Confluence, and Linear are read-only, context-only.** Never create, edit, comment on, or
+  transition anything there, and never report ticket/page events as tasks in the report.
 - **Hours are paid time — never inflate and never reduce.** Don't round a light day up to 8h. Don't
   invent hours for days with little visible work; give a conservative estimate plus a Work Type
   marker, or leave blank for the user. See `references/format-spec.md`.

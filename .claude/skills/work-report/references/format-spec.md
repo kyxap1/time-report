@@ -64,6 +64,12 @@ accomplishment — it happens *because of* the investigation/fix, so it belongs 
 - Bad:  `- investigated an ECR push failure blocking the Argo build and re-ran it` (the re-run is process, not a distinct piece of work)
 - Bad:  `- restarted a stuck extapiv2 deploy run` (restarting isn't the work — describe the underlying fix that made the restart worth doing, if any; otherwise leave it out)
 
+**Tracker and wiki events are context, not content.** Jira, Linear, and Confluence activity is
+gathered so you understand what a day was spent on — it never produces its own bullets. Never
+write "created JIRA-123", "moved a ticket to In Progress", or "updated a Confluence page" as a
+line of work. If that activity reflects real work (a design doc written, a migration scoped),
+describe the work itself, not the tracker event that recorded it.
+
 **Start each bullet with a verb**, not a repo or PR name. Put the link at the end of the line.
 - Good: `- created https://github.com/your-org/service-b/pull/231`
 - Bad:  `- service-b https://github.com/your-org/service-b/pull/231`
