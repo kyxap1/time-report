@@ -4,8 +4,9 @@ description: >-
   Generate or update a monthly work-time report (timesheet) for a given month. Given a target
   month (e.g. "build my time report for June"), this skill automatically gathers the user's GitHub
   PRs and commits in their configured GitHub org, mines their own Slack messages (including
-  private DMs) for the period, and (when connected) reads their Jira, Confluence, and Linear
-  activity as read-only context signals, reconciles everything by the configured local date (default
+  private DMs) for the period, reads their Google Calendar meetings to account for time spent in
+  meetings (including Zoom/Meet calls), and (when connected) reads their Jira, Confluence, and
+  Linear activity as read-only context signals, reconciles everything by the configured local date (default
   America/New_York), and writes a paste-ready tab-separated report file plus a short summary of
   judgment calls. An optional spreadsheet notes file (rows of date, logged hours, short task notes)
   is used when provided to supply authoritative logged hours and task hints, but is NOT required to
@@ -20,8 +21,8 @@ description: >-
 # Work report builder
 
 Turn a month of real activity into a complete, audit-safe work report by pulling in what the user
-actually did (GitHub + Slack) and writing it in the exact paste-ready format their spreadsheet
-expects.
+actually did (GitHub + Slack + calendar) and writing it in the exact paste-ready format their
+spreadsheet expects.
 
 The user names the month; everything else is automatic. A spreadsheet notes file is optional —
 when present it supplies the user's logged hours and task hints; without it, hours are estimated
@@ -56,7 +57,7 @@ days, blank days, days left for the user to fill).
 
 ## Process
 
-Work through these in order. Steps 3–5 are independent — run them in parallel.
+Work through these in order. Steps 3–6 are independent — run them in parallel.
 
 ### 1. Establish the month, then read any notes file
 
@@ -69,8 +70,8 @@ notes}}`. Treat the user's **logged hours as sacred** — they are paid, audited
 days are blank (no hours) and which carry a weekly rollup (one day logged with a large number and a
 note like "worked all week on X").
 
-If there is **no notes file**, that's fine: derive the days and hours entirely from GitHub + Slack
-activity (see the hours rules), and flag the whole Hours column in the summary so the user can
+If there is **no notes file**, that's fine: derive the days and hours entirely from GitHub, Slack
+and calendar activity (see the hours rules), and flag the whole Hours column in the summary so the user can
 confirm — nothing is user-verified in that case.
 
 ### 2. Set the period window
@@ -132,17 +133,41 @@ Bucket what you find into a short per-day digest (issue keys, page titles, what 
 server isn't connected, skip it and move on — these sources are optional enrichment, not a
 required input.
 
-### 6. Reconcile everything by local date
+### 6. Pull calendar meetings (context + hours; read-only)
+
+Meetings are real paid time that leaves no other trace. A day spent in an incident review, a
+planning session and two interviews can show zero commits and almost no Slack — without the
+calendar it reads as an empty day and the hours look unjustified. This step is what makes those
+days honest.
+
+- Use the Google Calendar MCP's events-list action, `GOOGLECALENDAR_EVENTS_LIST` (the client may
+  expose it under a truncated tool name). Parameters: `calendarId: "primary"`, `singleEvents: true`,
+  `orderBy: "startTime"`, `timeZone: <configured zone>`, `maxResults: 250`, and `timeMin`/`timeMax`
+  as RFC3339 **carrying the configured zone's offset** — a `Z` window slices local days at the wrong
+  hour and moves meetings onto neighbouring dates. Follow `nextPageToken` until it is absent.
+- Keep only time the user actually spent: drop `status: "cancelled"` events, and drop any where
+  their own attendee entry (`attendees[].self`) is `declined` or `needsAction`. Drop informational
+  all-day entries (birthdays, other people's OOO, `workingLocation`) — they are not time spent.
+  Keep the user's **own** OOO/PTO: it explains a zero day rather than filling one.
+- Per event record the local date, start/end (→ duration), title, and whether it is a video call
+  (`hangoutLink`, or a `zoom.us` link in `location`/`description`).
+- **There is no Zoom MCP.** Zoom calls are visible only as their calendar events, so an ad-hoc Zoom
+  with no invite is invisible here — if a day still looks unexplained, say so in the summary rather
+  than guessing.
+- Bucket into per-day meeting hours plus the one or two meetings that say what the day was about.
+
+### 7. Reconcile everything by local date
 
 For each day, merge the available sources: notes (authoritative for hours + intent, when present),
 GitHub (authoritative for what shipped, what was reviewed, and dates), Slack (activities not in
-PRs), plus the Jira/Confluence/Linear digest as background — it sharpens descriptions and hours
-judgment but contributes no bullets of its own. Collapse to the **subject of work**, not commit
+PRs), calendar meetings (authoritative for time spent in meetings), plus the Jira/Confluence/Linear
+digest as background. Meetings and tracker activity sharpen descriptions and hours judgment but
+contribute no bullets of their own. Collapse to the **subject of work**, not commit
 minutiae. Apply the writing and hours rules in
 `references/format-spec.md` exactly — they encode the required verb tone, altitude, honesty about
 hours, and how to handle forgotten/light/empty days, weekly rollups, and holidays.
 
-### 7. Build the file (run the script)
+### 8. Build the file (run the script)
 
 Produce a JSON array of day entries and hand it to the formatter so the tab/quote format is always
 correct:
@@ -158,7 +183,7 @@ Each entry: `{"date":"6/9/2026","hours":"8.00","work_type":"","lines":["- worked
 - Empty hours → `"hours":""`. Light-day marker → `"work_type":"review"` (etc.). Truly empty day →
   `{"date":"6/15/2026"}` with no hours/work_type/lines.
 
-### 8. Deliver
+### 9. Deliver
 
 Tell the user the file is ready and how to use it (`pbcopy < report-<month>.txt`, paste at the first
 date cell). Then give a short summary of judgment calls: which forgotten days you filled and why,
@@ -170,6 +195,8 @@ borderline hours worth their eye. Honesty here matters — these reports are aud
 - **Configured org only.** Drop personal/other-org repos from the report (mention them once if
   found, don't list them).
 - **Slack is read-only.** Searching and reading is fine; sending anything is not.
+- **Google Calendar is read-only.** The MCP also exposes create/patch/delete actions — never call
+  them. Only list and read events.
 - **Jira, Confluence, and Linear are read-only, context-only.** Never create, edit, comment on, or
   transition anything there, and never report ticket/page events as tasks in the report.
 - **Hours are paid time — never inflate and never reduce.** Don't round a light day up to 8h. Don't

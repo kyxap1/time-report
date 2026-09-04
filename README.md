@@ -1,8 +1,9 @@
 # work-report
 
 A Claude Code skill that builds a paste-ready monthly timesheet. You name a month; it gathers your
-GitHub PRs/commits in your configured org plus your own Slack activity, reconciles everything by
-your local date, and writes `report-<month>.txt`. A spreadsheet notes file is optional.
+GitHub PRs/commits in your configured org, your own Slack activity and your Google Calendar
+meetings, reconciles everything by your local date, and writes `report-<month>.txt`. A spreadsheet
+notes file is optional.
 
 The skill lives in `.claude/skills/work-report/`.
 
@@ -19,6 +20,11 @@ The skill lives in `.claude/skills/work-report/`.
   skill reads your own messages (incl. private DMs) directly via `mcp__claude_ai_Slack__*`,
   read-only. Without it, the report is built from GitHub + notes only and misses non-PR work
   (reviews, investigations, helping teammates, dashboards).
+- **Google Calendar MCP server connected — required** for the meetings step. The skill lists your
+  own calendar events for the period (read-only) so days spent in meetings get honest hours instead
+  of looking empty. Zoom calls are covered only as their calendar invites — there is no Zoom MCP, so
+  an ad-hoc Zoom with no invite stays invisible. Note this connector needs OAuth twice: once via
+  `/mcp`, then once more through the link the first calendar call returns.
 - **`config.json`** in the skill dir — set your `github_org` (copy from `config.example.json`).
   Stays local, not committed.
 - *(optional)* **Atlassian and Linear MCP servers** — when connected, the skill also reads your
@@ -26,8 +32,8 @@ The skill lives in `.claude/skills/work-report/`.
   was spent on; ticket/page events themselves never appear as report lines.
 - *(optional)* **notes file** — rows of `date · hours · note`; adds your logged hours and task hints.
 
-Connect the GitHub and Slack MCP servers in your Claude setup before running (check with `/mcp`).
-Your GitHub user and Slack ID are auto-detected.
+Connect the GitHub, Slack and Google Calendar MCP servers in your Claude setup before running
+(check with `/mcp`). Your GitHub user and Slack ID are auto-detected.
 
 ## Use
 

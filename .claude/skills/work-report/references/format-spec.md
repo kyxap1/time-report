@@ -70,6 +70,18 @@ write "created JIRA-123", "moved a ticket to In Progress", or "updated a Conflue
 line of work. If that activity reflects real work (a design doc written, a migration scoped),
 describe the work itself, not the tracker event that recorded it.
 
+**Meetings are context, not content.** Calendar events prove where the hours went; they are not
+accomplishments. Never write `- attended standup`, `- had a 1:1 with Sam`, or `- sprint planning` —
+sitting in a recurring meeting is not a reported piece of work. When a meeting produced real work,
+describe that work: `- discussed test-data provisioning with Alex`, `- investigated the extapiv2
+outage with the platform team`.
+
+The one exception is a day whose *only* activity is meetings. Six logged hours against an empty
+Description is worse for an audit than a plain statement of where they went, so give that day one
+or two bullets naming the subject of the meetings (`- worked on Q3 platform planning with the
+infra team`), mark Work Type `meetings`, and keep the altitude at subject-of-work — never list the
+invites.
+
 **Start each bullet with a verb**, not a repo or PR name. Put the link at the end of the line.
 - Good: `- created https://github.com/your-org/service-b/pull/231`
 - Bad:  `- service-b https://github.com/your-org/service-b/pull/231`
@@ -131,6 +143,10 @@ day from claiming an impossible figure. Sharing across **adjacent** days is the 
 **c. Blank day, but there IS activity (commits / Slack / a note).** The user simply forgot to log
 it — it is not a zero day. Fill it by fact:
    - Clear full day of substantive work (multiple PRs/commits, real Slack activity) → `8.00`.
+   - **Meetings count as activity, and as hours.** Sum the meetings the user actually attended
+     that day, add the work around them, and mark Work Type `meetings` when meetings dominate. A
+     calendar-heavy day is not a light day. Don't double-count either: a 3h meeting block plus two
+     PRs is still one 8h day, not 11h.
    - Light or uncertain work (e.g. only a small revert plus an investigation, few commits, no clear
      deliverable) → **do not write 8h**. Put a conservative estimate in Hours and a marker word in
      **Work Type (C)** explaining the lighter load (e.g. `review`, `investigation`, `debugging`,
@@ -138,10 +154,13 @@ it — it is not a zero day. Fill it by fact:
      can't justify a number, leave Hours blank and flag the day in the summary for the user to fill
      — only they know how long the investigation took.
 
-**d. Truly empty day — no commits, no Slack, no note.** Leave it empty: **the row must still exist
+**d. Truly empty day — no commits, no Slack, no meetings, no note.** Leave it empty: **the row must still exist
 in the file** (so the structure is complete), but with date only, no hours, no description.
 
 **e. Holiday.** Date + `"holiday"` in the description, no hours.
+
+**f. The user's own OOO/PTO on the calendar.** Treat it like a holiday — no hours, description
+`"PTO"` (or `"OOO"`). It explains a zero day; it never justifies filling one.
 
 When in doubt between b/c/d, prefer honesty over completeness: a blank cell the user fills is better
 than a fabricated 8.
@@ -186,6 +205,13 @@ A logged-as-is short day (notes said 4h — keep it):
 6/10/2026	4.00		"- diagnosed why the service image failed the security-scan gate
 - created https://github.com/your-org/service-a/pull/487 to refresh the build cache so patches land
 - continued the integration-test work https://github.com/your-org/service-a/pull/482"
+```
+
+A meetings-only day — hours justified by the calendar, marker set, no invites listed:
+
+```
+6/17/2026	7.00	meetings	"- worked on Q3 platform planning with the infra team
+- discussed the staging data-retention approach with Alex"
 ```
 
 Empty weekday (present, date only) and a holiday:
