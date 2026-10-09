@@ -117,6 +117,13 @@ tend to drift toward the managerial, self-important tone this list is written to
   (prefer "agreed to help").
 
 **Links:** configured org only. Use full `https://github.com/<org>/<repo>/pull/<n>` URLs.
+When work is found only on a branch with no PR behind it, do not decide alone how to record it:
+tell the user in chat (repo, branch, what the commits hold) and confirm whether the bullet carries
+the branch link, no link, or waits for the PR. Neither silently add a branch link nor silently drop
+the entry. The
+report links PRs, not branches: when work is found only on a branch with no PR behind it, write the
+bullet without a link and say so explicitly in the chat summary (repo, branch, what it holds) — a
+missing PR is something the user should hear about, not something the report quietly points to.
 
 ---
 
